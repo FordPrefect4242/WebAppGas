@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Classifica Gara a Squadre</title>
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; background-color: #f4f4f9; }
+    h1 { color: #333; }
+    #timer { font-size: 2.5em; font-weight: bold; color: #d9534f; margin: 20px 0; background: #fff; display: inline-block; padding: 10px 30px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    table { margin: 0 auto; border-collapse: collapse; width: 95%; background-color: white; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+    th, td { border: 1px solid #ddd; padding: 12px; text-align: center; }
+    th { background-color: #0056b3; color: white; }
+    .corretta { background-color: #d4edda; color: #155724; font-weight: bold; }
+    .errata { background-color: #f8d7da; color: #721c24; }
+  </style>
+</head>
+<body>
+
+  <h1>Tabellone Gara</h1>
+  <div id="timer">Caricamento tempo...</div>
+  
+  <table id="tabella-classifica">
+    </table>
+
+  <script>
+    let serverStartTime = 0;
+    let competitionDuration = 0;
+    let countdownInterval = null;
+
+    // Funzione per richiedere i dati al server
+    function fetchDati() {
+      google.script.run.withSuccessHandler(function(data) {
+        serverStartTime = data.startTime;
+        competitionDuration = data.duration;
+        
+        avviaTimer();
+        disegnaTabella(data);
+      }).getScoreboardData();
+    }
+
+    // Gestione del Timer fluido
+    function avviaTimer() {
+      if (countdownInterval) clearInterval(countdownInterval);
+      
+      countdownInterval = setInterval(function() {
+        let now = new Date().getTime();
+        let endTime = serverStartTime + (competitionDuration * 60000); // Converte minuti in millisecondi
+        let timeLeft = endTime - now;
+
+        let timerElement = document.getElementById('timer');
+
+        if (now < serverStartTime) {
+          timerElement.innerText = "LA GARA NON È ANCORA INIZIATA";
+          timerElement.style.color = "#5bc0de";
+          return;
+        }
+
+        if (timeLeft <= 0) {
+          timerElement.innerText = "GARA TERMINATA";
+          timerElement.style.color = "#333";
+          clearInterval(countdownInterval);
+          return;
+        }
+
+        // Calcolo ore, minuti, secondi
+        let ore = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        let minuti = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+        let secondi = Math.floor((timeLeft % (1000 * 60)) / 1000);
+
+        // Formattazione per avere sempre due cifre (es. 09 anziché 9)
+        minuti = minuti < 10 ? "0" + minuti : minuti;
+        secondi = secondi < 10 ? "0" + secondi : secondi;
+
+        let text = ore > 0 ? ore + ":" + minuti + ":" + secondi : minuti + ":" + secondi;
+        timerElement.innerText = "Tempo rimanente: " + text;
+
+      }, 1000); // Aggiorna ogni secondo
+    }
+
+    // Funzione base per disegnare la tabella (stile matrice)
+    function disegnaTabella(data) {
+      let html = "<thead><tr><th>Squadra</th><th>Punteggio</th>";
+      
+      // Estrai gli ID dei problemi per l'intestazione
+      // let problemiKeys = Object.keys(data.problems).sort();
+      let problemiKeys = Object.keys(data.problems).sort((a, b) => {
+        return parseInt(a) - parseInt(b);
+      });
+  
+      problemiKeys.forEach(p => {
+        html += `<th>${p}<br><small>(${data.problems[p].currentVal} pt)</small></th>`;
+      });
+      html += "</tr></thead><tbody>";
+
+      // Ordina le squadre per punteggio decrescente
+      let squadreArray = Object.keys(data.teams).map(id => {
+        return { id: id, ...data.teams[id] };
+      });
+      squadreArray.sort((a, b) => b.score - a.score);
+
+      // Popola le righe
+      squadreArray.forEach(squadra => {
+        html += `<tr>
+                   <td><strong>${squadra.name}</strong></td>
+                   <td><strong>${squadra.score}</strong></td>`;
+        
+        problemiKeys.forEach(p => {
+          let puntiOttenuti = squadra.problems[p];
+          let isJolly = (squadra.jolly == parseInt(p));
+          let cellClass = "";
+          let testoCella = "";
+
+          if (squadra.solved[p] > 0) {
+            cellClass = "corretta";
+            testoCella = puntiOttenuti + ((isJolly) ? " (J)" : "");
+          } else if (squadra.solved[p] <= 0) {
+            cellClass = "errata";
+            testoCella = puntiOttenuti + ((isJolly) ? " (J)" : "");
+          } else {
+             testoCella = (isJolly) ? "(J)" : "-";
+          }
+
+          html += `<td class="${cellClass}">${testoCella}</td>`;
+        });
+        
+        html += "</tr>";
+      });
+
+      html += "</tbody>";
+      document.getElementById('tabella-classifica').innerHTML = html;
+    }
+
+    // Richiedi i dati appena si carica la pagina
+    fetchDati();
+    // Aggiorna i dati della gara dal server ogni 30 secondi (30000 millisecondi)
+    setInterval(fetchDati, 30000); 
+  </script>
+</body>
+</html>
