@@ -1,4 +1,4 @@
-# Web app scrausa per GAS di Fisica
+# Web app scrausa per GAS
 
 ## Inizializzazione
 Dopo aver copiato i tre file su un progetto di Google Apps Script, è necessaria la configurazione di un foglio Google Sheet per la gestione della gara stessa. In _Codice.gs_ andrà copiato l'ID del foglio (la parte compresa tra /d/ e / nel link del foglio stesso) nell'apposita costante _SHEET_ID_.
