@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+  <head><title>Squadra <?= teamName ?></title></head>
+  <body>
+    <h2><?= teamName ?></h2>
+    
+    <div>
+      <input type='number' id="jollySelect" min='1' max='<?= numDom ?>'>
+      <button onclick="scegliJolly()">Imposta Jolly</button>
+    </div>
+
+    <hr>
+
+    <div>
+      <h3>Consegna Problema</h3> <br><br>
+      ID Problema: <input type='number' id="probId" min='1' max='<?= numDom ?>'><br><br><br>
+      Risposta: &emsp; <input type="checkbox" id="sign"> – &emsp;   <input type="number" id="ans1" step='0.0001' min = '1' max = '9.9999'>   
+      x 10^  <input type="number" id="ans2"><br><br>
+      <p id="msg"></p><br><br>
+      <button onclick="consegna()">Invia</button>
+    </div>
+
+    <script>
+      function scegliJolly() {
+        var prob = parseInt(document.getElementById('jollySelect').value);
+        if (prob < 1 || prob > parseInt('<?= numDom ?>')) {
+          p1.innerHTML = "Problema non valido";
+          return;
+        }
+        google.script.run.withSuccessHandler(res => alert(res.message)).setJolly('<?= teamId ?>', prob);
+      }
+
+      function consegna() {
+        var prob = parseInt(document.getElementById('probId').value);
+        var r1 = parseFloat(document.getElementById('ans1').value);
+        var p1 = document.getElementById('msg');
+        p1.innerHTML = '';
+        var r2 = parseFloat(document.getElementById('ans2').value);
+        if (r1 < 1 || r1 > 9.9999) {
+          p1.innerHTML = "Formato risposta non valido. Inserirla in notazione scientifica con massimo 4 cifre dopo la virgola.";
+          return;
+        }
+        if (!Number.isInteger(10000*r1)) {
+          r1 = Math.round(10000*r1)/10000;
+          
+        }
+        if (!Number.isInteger(r2)) {
+          p1.innerHTML = "L'esponente deve essere intero";
+          return;
+        }
+        if (prob < 1 || prob > parseInt('<?= numDom ?>')) {
+          p1.innerHTML = "Problema non valido";
+          return;
+        }
+        
+        if (document.getElementById('sign').checked) {
+          r1 = r1*(-1);
+          document.getElementById('sign').checked = false;
+        }
+        google.script.run.withSuccessHandler(res => alert(res.message))
+          .submitAnswer('<?= teamId ?>', prob, r1, r2);
+      }
+    </script>
+  </body>
+</html>
